@@ -2,9 +2,9 @@
 	position: relative;
 }
 .cms .quickaddnew-button{
-	position: absolute;
-	top: 5px;
+	top: 2px;
 	margin-left: 5px;
+	vertical-align: top;
 }
 
 .quickaddnew-dialog{

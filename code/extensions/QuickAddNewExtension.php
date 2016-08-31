@@ -7,6 +7,15 @@
  **/
 class QuickAddNewExtension extends Extension
 {
+    /**
+     * @var DataObject
+     **/	
+	protected $editObject;
+	
+    /**
+     * @var FieldList
+     **/	
+	protected $editFields;
 
     /**
      * @var FieldList
@@ -43,8 +52,23 @@ class QuickAddNewExtension extends Extension
     public static $allowed_actions = array(
         'AddNewForm',
         'AddNewFormHTML',
-        'doAddNew'
+        'doAddNew',
+        
+        'EditForm',
+        'EditFormHTML',
+        'doEdit',
     );
+	
+	protected function Requirements() {
+        Requirements::javascript(THIRDPARTY_DIR . '/jquery/jquery.js');
+        Requirements::javascript(THIRDPARTY_DIR . '/jquery-entwine/dist/jquery.entwine-dist.js');
+        Requirements::javascript(THIRDPARTY_DIR . '/jquery-ui/jquery-ui.js');
+        Requirements::javascript(THIRDPARTY_DIR . '/jquery-validate/lib/jquery.form.js');
+        Requirements::javascript(QUICKADDNEW_MODULE . '/javascript/quickaddnew.js');
+        Requirements::css(THIRDPARTY_DIR . '/jquery-ui-themes/smoothness/jquery-ui.css');
+        Requirements::css(QUICKADDNEW_MODULE . '/css/quickaddnew.css');
+        Requirements::add_i18n_javascript(QUICKADDNEW_MODULE . '/javascript/lang');
+	}
 
     /**
      * Tell this form field to apply the add new UI and fucntionality
@@ -74,15 +98,9 @@ class QuickAddNewExtension extends Extension
         if (!singleton($class)->canCreate()) {
             return $this->owner;
         }
+		
+		$this->Requirements();
 
-        Requirements::javascript(THIRDPARTY_DIR . '/jquery/jquery.js');
-        Requirements::javascript(THIRDPARTY_DIR . '/jquery-entwine/dist/jquery.entwine-dist.js');
-        Requirements::javascript(THIRDPARTY_DIR . '/jquery-ui/jquery-ui.js');
-        Requirements::javascript(THIRDPARTY_DIR . '/jquery-validate/lib/jquery.form.js');
-        Requirements::javascript(QUICKADDNEW_MODULE . '/javascript/quickaddnew.js');
-        Requirements::css(THIRDPARTY_DIR . '/jquery-ui-themes/smoothness/jquery-ui.css');
-        Requirements::css(QUICKADDNEW_MODULE . '/css/quickaddnew.css');
-        Requirements::add_i18n_javascript(QUICKADDNEW_MODULE . '/javascript/lang');
         if (!$fields) {
             if (singleton($class)->hasMethod('getAddNewFields')) {
                 $fields = singleton($class)->getAddNewFields();
@@ -166,6 +184,116 @@ class QuickAddNewExtension extends Extension
         $callback = $this->sourceCallback;
         $items = $callback($obj);
         $this->owner->setSource($items);
+
+        // if this field is a multiselect field, we add the new Object ID to the existing
+        // options that are selected on the field then set that as the value
+        // otherwise we just set the new Object ID as the value
+        if (isset($data['existing'])) {
+            $existing = $data['existing'];
+            $value = explode(',', $existing);
+            $value[] = $obj->ID;
+        } else {
+            $value = $obj->ID;
+        }
+
+        $this->owner->setValue($value);
+        $this->owner->setForm($form);
+        return $this->owner->FieldHolder();
+    }
+
+    /**
+     * Allow to create new object (@see #useAddNew)
+     *
+     * @param DataObject $dataObject - parent class that has has_one relation if the field
+     * @return FormField $this->owner
+     **/
+	public function useAdd(
+		$dataObject,
+        FieldList $fields = null,
+        RequiredFields $required = null,
+        $isFrontend = false
+	) {
+    	$strFieldName = $this->owner->getName();
+		if(substr($strFieldName, -2) == 'ID')
+			$strRelationName = substr($strFieldName, 0, -2);
+		
+		$object = $dataObject->getComponent($strRelationName);
+		$class = $object->getClassName();
+		
+		return $this->useAddNew(
+			$class, 
+			function() use ($class) {
+				return DataList::create($class)->map()->toArray();
+			}, 
+			$fields, 
+			$required, 
+			$isFrontend
+		);
+	}
+
+    /**
+     * Allow to edit currently set object  
+     *
+     * @param DataObject $dataObject - parent class that has has_one relation if the field
+     * @return FormField $this->owner
+     **/
+    public function useEdit($dataObject) {
+    	$strFieldName = $this->owner->getName();
+		if(substr($strFieldName, -2) == 'ID')
+			$strRelationName = substr($strFieldName, 0, -2);
+		
+		$object = $dataObject->getComponent($strRelationName);
+
+        // if the user can't edit this object type, don't modify the form
+        if(!$object->isInDB() || !$object->canEdit())
+            return $this->owner;
+
+		$this->Requirements();
+
+        $this->owner->addExtraClass('quickaddnew-field-edit');
+
+		$this->class = $object->getClassName();
+		$this->editObject = $object;
+        $this->editFields = $object->hasMethod('getAddNewFields') 
+        	? $object->getAddNewFields() 
+			: $object->getCMSFields();
+
+        return $this->owner;
+    }
+
+    public function EditForm() {
+        $action = FormAction::create('doEdit', _t('QUICKADDNEW.Add', 'Save'))->setUseButtonTag('true');
+
+        if (!$this->isFrontend)
+            $action->addExtraClass('ss-ui-action-constructive')->setAttribute('data-icon', 'accept');
+
+        $actions = FieldList::create($action);
+        $form = Form::create($this->owner, 'EditForm', $this->editFields, $actions, $this->addNewRequiredFields);
+		if($this->editObject)
+			$form->loadDataFrom($this->editObject);
+
+        $this->owner->extend('updateQuickAddNewForm', $form);
+
+        return $form;
+    }
+	
+    public function EditFormHTML() {
+        return $this->EditForm()->forTemplate();
+    }
+
+    public function doEdit($data, $form) {
+        $obj = $this->editObject;
+        if (!$obj->canEdit()) {
+            return Security::permissionFailure(Controller::curr(), "You don't have permission to create this object");
+        }
+        $form->saveInto($obj);
+
+        try {
+            $obj->write();
+        } catch (Exception $e) {
+            $form->setMessage($e->getMessage(), 'error');
+            return $form->forTemplate();
+        }
 
         // if this field is a multiselect field, we add the new Object ID to the existing
         // options that are selected on the field then set that as the value
