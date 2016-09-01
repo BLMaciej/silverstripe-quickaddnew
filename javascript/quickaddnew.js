@@ -62,7 +62,7 @@ jQuery.entwine("quickaddnew", function($) {
 			// configure the dialog
 			this.getDialog().data("field", this).dialog({
 				autoOpen: 	false,
-				width:   	600,
+				width:      $(window).width() * 0.6,
 				modal:    	true,
 				title: 		this.data('dialog-title'),
 				position: 	{ my: "center", at: "center", of: window },
