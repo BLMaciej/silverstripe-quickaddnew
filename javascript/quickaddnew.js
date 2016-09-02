@@ -36,11 +36,13 @@ jQuery.entwine("quickaddnew", function($) {
 				
             // create edit button
             if($(this).hasClass('quickaddnew-field-edit'))
-                var editButton = $("<button />")
-                    .attr('type', 'button')
-                    .attr('href', '#')
+                var editButton = $("<a />")
+                    //.attr('type', 'submit')
+                    //.attr('href', '#')
+                    .attr('href', $(this).data('url'))
                     .text(ss.i18n._t('QUICKADDNEW.Edit'))
-                    .addClass("quickaddnew-button edit ss-ui-button ss-ui-button-small")
+                    //.addClass("quickaddnew-button edit ss-ui-button ss-ui-button-small")
+                    .addClass("ss-ui-button ss-ui-button-small")
                     .appendTo(self.parents('div:first'));
 
 			// create dialog
@@ -62,7 +64,7 @@ jQuery.entwine("quickaddnew", function($) {
 			// configure the dialog
 			this.getDialog().data("field", this).dialog({
 				autoOpen: 	false,
-				width:      $(window).width() * 0.6,
+				width:   	$(window).width() * 0.6,
 				modal:    	true,
 				title: 		this.data('dialog-title'),
 				position: 	{ my: "center", at: "center", of: window },

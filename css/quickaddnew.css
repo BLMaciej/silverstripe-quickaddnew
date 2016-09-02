@@ -1,7 +1,8 @@
 .cms .quickaddnew-field{
 	position: relative;
 }
-.cms .quickaddnew-button{
+.cms .quickaddnew-button,
+.cms .quickaddnew-field a {
 	top: 2px;
 	margin-left: 5px;
 	vertical-align: top;

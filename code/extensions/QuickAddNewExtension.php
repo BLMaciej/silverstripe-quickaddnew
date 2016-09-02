@@ -261,6 +261,16 @@ class QuickAddNewExtension extends Extension
         return $this->owner;
     }
 
+	// TODO temporary fix for problems with navigation within popup
+	public function onBeforeRender($field) {
+		if($this->editObject) {
+			$strObjectBaseClass = get_parent_class($this->editObject);
+			$gridField = GridField::create($strObjectBaseClass, $this->editObject->plural_name(), DataList::create($strObjectBaseClass));
+			$gridField->setForm($field->getForm());
+			$field->setAttribute('data-url', Controller::join_links($gridField->Link('item'), $this->editObject->ID, 'edit'));
+		}
+	}
+
     public function EditForm() {
         $action = FormAction::create('doEdit', _t('QUICKADDNEW.Add', 'Save'))->setUseButtonTag('true');
 
