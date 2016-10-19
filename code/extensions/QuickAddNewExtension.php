@@ -170,8 +170,6 @@ class QuickAddNewExtension extends Extension
      **/
     public function doAddNew($data, $form)
     {
-    	$this->bEditing = true;
-		
         $obj = Object::create($this->addNewClass);
         if (!$obj->canCreate()) {
             return Security::permissionFailure(Controller::curr(), "You don't have permission to create this object");
@@ -202,9 +200,7 @@ class QuickAddNewExtension extends Extension
 
         $this->owner->setValue($value);
         $this->owner->setForm($form);
-        $fieldHolder = $this->owner->FieldHolder();
-		$this->bEditing = false;
-		return $fieldHolder;
+        return $this->owner->FieldHolder();
     }
 
     /**
@@ -269,7 +265,7 @@ class QuickAddNewExtension extends Extension
 
 	// TODO temporary fix for problems with navigation within popup
 	public function onBeforeRender($field) {
-		if($this->bEditing) {
+		if($this->editObject && !Director::is_ajax()) {
 			$strObjectBaseClass = get_parent_class($this->editObject);
 			$gridField = GridField::create($strObjectBaseClass, $this->editObject->plural_name(), DataList::create($strObjectBaseClass));
 			$gridField->setForm($field->getForm());
@@ -324,7 +320,7 @@ class QuickAddNewExtension extends Extension
 
         $this->owner->setValue($value);
         $this->owner->setForm($form);
-        return $this->owner->FieldHolder();
+		return $this->owner->FieldHolder();
     }
 
     /**
